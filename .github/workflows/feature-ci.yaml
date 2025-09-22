@@ -1,0 +1,33 @@
+name: Feature CI
+
+on:
+  push:
+    branches:
+      - 'feature/*'
+
+jobs:
+  dotnet-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: 
+          dotnet-version: 8.0.x
+      - name: Restore .NET dependencies
+      - run: dotnet restore src/back/TestBack.sln
+      - name: Building .NET solution project
+      - run: dotnet build src/back/TestBack.sln --no-restore
+      - name: Running .NET tests
+      - run: dotnet test src/back/TestBack.sln --no-build
+
+  node-build: 
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - name: Installing node dependencies
+    - run: npm ci
+    - name: Building node project
+    - run: npm run build
