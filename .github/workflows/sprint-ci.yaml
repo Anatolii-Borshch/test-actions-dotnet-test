@@ -1,0 +1,58 @@
+name: Sprint CI
+
+on: 
+  pull_request:
+    branches:
+      - 'sprint*'
+jobs:
+  dotnet-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with: 
+          dotnet-version: 8.0.x
+
+      - name: Restore .NET dependencies
+        run: dotnet restore src/back/TestBack.sln
+
+      - name: Build .NET solution project
+        run: dotnet build src/back/TestBack.sln --no-restore
+
+      - name: Run .NET tests with coverage
+        run: dotnet test src/back/TestBack.sln --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      - name: Run analyzers
+        run: dotnet format --verify-no-changes
+
+      - name: Generate coverage report
+        uses: danielpalme/ReportGenerator-GitHub-Action@v5
+        with:
+          reports: "./TestResults/**/*.xml"
+          targetdir: "./coveragereport"
+          reporttypes: "Html;Cobertura"
+
+      - name: Check coverage threshold
+        run: |
+          coverage=$(grep -oP 'line-rate="\K[0-9.]+' ./coveragereport/Cobertura.xml | head -1)
+          echo "Coverage=$coverage"
+          if (( $(echo "$coverage < 0.6" | bc -l) )); then
+            echo "Coverage below 60%"
+            exit 1
+          fi
+
+  node-build: 
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Node.js dependencies
+        run: npm ci
+
+      - name: Build Node.js project
+        run: npm run build
